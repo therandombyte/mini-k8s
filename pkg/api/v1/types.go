@@ -62,7 +62,7 @@ type PodList struct {
 
 // What: A pod blueprint inside a controller
 // Why: Use this inside DeploymentSpec to say what Pod should the deployment create
-type PodSpecTemplate struct {
+type PodTemplateSpec struct {
 	Metadata apimachinery.ObjectMeta
 	Spec PodSpec
 }
@@ -98,11 +98,38 @@ type NodeList struct {
 	Items []Node
 }
 
+// What: Observed state
+// Why: how many pods exist and how many are in running state, to give users and controllers a quick viewß
+type DeploymentStatus struct {
+	Replicas int
+	ReadyReplicas int
+}
 
-type DeploymentStatus struct {}
+// What: Desired state of a deployment
+// Why: Deployment Controller will read the pods from templatespec and match it with replicas
+type DeploymentSpec struct {
+	Replicas int
+	Selector map[string]string
+	Template PodTemplateSpec
+}
 
-type DeploymentSpec struct {}
+// Full deployment object like pod
+// Why: Controller manager will run a deployment controller which watches deployments via ListDeployments
+// compares spec.Replicas to actual pods, creates missing pods, updates Status.Replicas and ReadyReplicas
+type Deployment struct {
+	apimachinery.TypeMeta
+	Metadata apimachinery.ObjectMeta
+	Spec DeploymentSpec
+	Status DeploymentStatus
+}
 
-type Deployment struct {}
+type DeploymentList struct {
+	apimachinery.TypeMeta
+	Metadata apimachinery.ListMeta
+	Items []Deployment
+}
 
-type DeploymentList struct {}
+
+// Crux: Every resource has TypeMeta and ObjectMeta, has Spec and Status
+// Every list has TypeMeta, ResourceVersion, Items
+// Controllers read spec, write status
