@@ -12,34 +12,35 @@ Building the API Server first as it defines the Object contract, and other compo
 
 ## Scaffolding
 
-cmd: for binaries
-cmd/mk-apiserver: load config, initialize store, initialize watches, server HTTP, persist objects
-cmd/mkctl: a layer over api server to debug the system faster, like kubectl
-cmd/mk-scheduler: watch pods, filter for NodeName, list nodes, choose a node fit, bind pod to Node. Start with easy logic
-cmd/mk-kubelet: register node object, watch pods assigned, start/stop workloads, update pod and node status. No need to
-run OCI containers in the start, use exec.Command
-cmd/mk-controllermanager: deployment or node controller as a start. Compare desired and actual, then converge.
+1. cmd: for binaries.
+2. cmd/mk-apiserver: load config, initialize store, initialize watches, server HTTP, persist objects.
+3. cmd/mkctl: a layer over api server to debug the system faster, like kubectl.
+4. cmd/mk-scheduler: watch pods, filter for NodeName, list nodes, choose a node fit, bind pod to Node. Start with easy logic.
 
-pkg/api/v1: the public api, versioned for extension
-pkg/apimachinery: metadata, lists, watch events, status objects, conditions, api errors
-pkg/store: the backend implementation for api server for storage
+5. cmd/mk-kubelet: register node object, watch pods assigned, start/stop workloads, update pod and node status. No need to
+   run OCI containers in the start, use exec.Command
+6. cmd/mk-controllermanager: deployment or node controller as a start. Compare desired and actual, then converge.
 
-pkg/apiserver:
-server.go: boot HTTP server
-router.go: register routes
-handlers_xx.go: resource specific logic
-codec.go: json encode/decode
-admission.go: defaulting + base validation
-pkg/client: for controllers and agents to interact with API Server (createPod, ListPod....)
+7. pkg/api/v1: the public api, versioned for extension
+8. pkg/apimachinery: metadata, lists, watch events, status objects, conditions, api errors
+9. pkg/store: the backend implementation for api server for storage
+
+10. pkg/apiserver:
+    a) server.go: boot HTTP server
+    b) router.go: register routes
+    c) handlers_xx.go: resource specific logic
+    d) codec.go: json encode/decode
+    e) admission.go: defaulting + base validation
+11. pkg/client: for controllers and agents to interact with API Server (createPod, ListPod....)
 
 ## Leaving out
 
-RBAC
-API Aggregation
-Admission Webhooks
-CRDs
-Informer Caches
-Leader Election
-CNI/CSI
-kube-proxy
-Services and DNS
+1. RBAC
+2. API Aggregation
+3. Admission Webhooks
+4. CRDs
+5. Informer Caches
+6. Leader Election
+7. CNI/CSI
+8. kube-proxy
+9. Services and DNS
