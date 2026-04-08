@@ -16,7 +16,6 @@ Building the API Server first as it defines the Object contract, and other compo
 2. cmd/mk-apiserver: load config, initialize store, initialize watches, server HTTP, persist objects.
 3. cmd/mkctl: a layer over api server to debug the system faster, like kubectl.
 4. cmd/mk-scheduler: watch pods, filter for NodeName, list nodes, choose a node fit, bind pod to Node. Start with easy logic.
-
 5. cmd/mk-kubelet: register node object, watch pods assigned, start/stop workloads, update pod and node status. No need to
    run OCI containers in the start, use exec.Command
 6. cmd/mk-controllermanager: deployment or node controller as a start. Compare desired and actual, then converge.
@@ -26,11 +25,11 @@ Building the API Server first as it defines the Object contract, and other compo
 9. pkg/store: the backend implementation for api server for storage
 
 10. pkg/apiserver:
-    a) server.go: boot HTTP server
-    b) router.go: register routes
-    c) handlers_xx.go: resource specific logic
-    d) codec.go: json encode/decode
-    e) admission.go: defaulting + base validation
+    a. server.go: boot HTTP server
+    b. router.go: register routes
+    c. handlers_xx.go: resource specific logic
+    d. codec.go: json encode/decode
+    e. admission.go: defaulting + base validation
 11. pkg/client: for controllers and agents to interact with API Server (createPod, ListPod....)
 
 ## Leaving out
