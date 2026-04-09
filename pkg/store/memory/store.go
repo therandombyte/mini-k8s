@@ -5,42 +5,119 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
-
-	"github.com/therandombyte/mini-k8s/pkg/store"
+	"sync/atomic"
 )
 
 // Implementation detail, hence not exported
-// a 3 level map to store "pod:default:nginx":"*v1.Pod"(pointer to object)
-// rv is resourceversion counter
-type memoryStore struct {
+// data is a map whose each value is also a map
+// Nested map: resource -> (namespace/name -> obj)
+// Splitting the map by resource makes it easy to implement API collections like GET /pods
+// Storing ns/name as single string prevents exta nested level map
+// listRV is resourceversion counter
+type Store struct {
 	mu sync.RWMutex
-	objects map[string]map[string]map[string]any
-	rv int64
+	data map[string]map[string]any
+	listRV atomic.Int64
 }
 
-// constructor that returns a store backed by memorystore
-// to be invoked by API server
-func New() store.Store {
-	return &memoryStore{
-		objects: make(map[string]map[string]map[string]any),
+// What: constructor that returns a store backed by memorystore
+// Why: to be invoked by API server
+// Initializing the data map keeps the other code free to check for nil
+func New() *Store {
+	return &Store{
+		data: map[string]map[string]any{},
 	}
 }
 
+func key(namespace, name string) string {
+	return namespace + "/" + name
+}
 
+// rough analogue of etcd's index used for resourceversion in k8s
+func (s *Store) nextListRV() int64 {
+	return s.listRV.Add(1)
+}
+ 
+// handlers will call Create for Pods, Nodes, Deployments
+// return error will converted to http error codes by handlers
+func (s *Store) Create(ctx context.Context, resource, namespace, name string, obj any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+ 
+	// ensure map exists, check for existing obj, assign obj, ser object RV if it has metadata
 
-func (s *memoryStore) Create(ctx context.Context, resource, namespace, name string, obj any) error {
+	// lazy initialization
+	if s.data[resource] == nil {
+		s.data[resource] = map[string]any{}
+	}
+
+	k := key(namespace, name)
+	if _,exists := s.data[resource][k];exists {
+		return fmt.Errorf("%s %q already exists", resource, k)
+	}
+
+	s.data[resource][k] = obj
+	s.nextListRV()
 	return nil
 }
-func (s *memoryStore) Get(ctx context.Context, resource, namespace, name string) (any, bool, error) {
-	return nil,false,nil
+
+// backs the GET /api/v1/pods/{name} or /nodes/{name}
+func (s *Store) Get(ctx context.Context, resource, namespace, name string) (any, bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	//lookup and return obj
+	obj, ok := s.data[resource][key(namespace,name)]
+	return obj, ok, nil
 }
-func (s *memoryStore) List(ctx context.Context, resource, namespace string) ([]any, int64, error) {
-	return nil,0,nil
+
+// returned rv is used to update PodList.Metadata.ResourceVersion for future watch mechanism
+func (s *Store) List(ctx context.Context, resource, namespace string) ([]any, int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// collect all objects under resource+namespace, return rv
+
+	items := make([]any, 0, len(s.data[resource]))
+	for key, obj := range s.data[resource] {
+		if namespace == "" || strings.HasPrefix(key, namespace+"/") {
+			items = append(items, obj)
+		}
+	}
+
+	return items, s.listRV.Load(), nil
 }
-func (s *memoryStore) Update(ctx context.Context, resource, namespace, name string, obj any) error {
+
+// for pod status updates
+func (s *Store) Update(ctx context.Context, resource, namespace, name string, obj any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// ensure obj exists, assign new rv, replace
+
+	if s.data[resource] == nil {
+		s.data[resource] = map[string]any{}
+	}
+
+	s.data[resource][key(namespace, name)] = obj
+	s.nextListRV()
 	return nil
 }
-func (s *memoryStore) Delete(ctx context.Context, resource, namespace, name string) error {
+
+// delete from store
+func (s *Store) Delete(ctx context.Context, resource, namespace, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// delete if present
+
+	if s.data[resource] != nil {
+		delete(s.data[resource], key(namespace, name))
+	}
+
+	s.nextListRV()
 	return nil
 }
