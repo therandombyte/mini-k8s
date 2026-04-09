@@ -6,8 +6,8 @@ type APIConfig struct {
 	Address string
 }
 
-func DefautAPIConfig() APIConfig {
+func DefaultAPIConfig() APIConfig {
 	return APIConfig {
-		Address: ":8080",
+		Address: ":8089",
 	}
 }
