@@ -10,8 +10,10 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	v1 "github.com/therandombyte/mini-k8s/pkg/api/v1"
 	"github.com/therandombyte/mini-k8s/pkg/config"
 	"github.com/therandombyte/mini-k8s/pkg/store"
+	"github.com/therandombyte/mini-k8s/pkg/util"
 )
 
 type Server struct {
@@ -58,5 +60,31 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) handlePods(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		items, rv, err := s.st.List(r.Context(), "pods", "default")
+		
+		if err != nil {
+			util.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+
+		list := v1.PodList{}
+		list.APIVersion = "mini-k8s/v1"
+		list.Kind = "PodList"
+		list.Metadata.ResourceVersion = rv
+
+		for _, item := range items {
+			// type assertion, treat item as *v1.Pod if it really is one
+			// k8s objects are stored and returned as pointers to structs
+			if pod, ok := item.(*v1.Pod); ok {
+				list.Items = append(list.Items, *pod)
+			}
+		}
+		util.WriteJSON(w, http.StatusOK, list)
+
+	case http.MethodPost:
+
 	
+	}
 }
