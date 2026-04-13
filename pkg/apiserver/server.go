@@ -47,6 +47,7 @@ func (s *Server) Run(ctx context.Context) error {
 	})
 
 	mux.HandleFunc("/api/v1/pods", s.handlePods)
+	mux.HandleFunc("/api/v1/pods/", s.handlePodsByName)
 
 
 	httpServer := &http.Server{Addr: s.cfg.Address, Handler: mux}
@@ -119,4 +120,8 @@ func (s *Server) handlePods(w http.ResponseWriter, r *http.Request) {
 
 func decode[T any](r *http.Request, out *T) error {
 	return json.NewDecoder(r.Body).Decode(out)
+}
+
+func (s *Server) handlePodsByName(w http.ResponseWriter, r *http.Request) {
+	
 }

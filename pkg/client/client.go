@@ -88,3 +88,15 @@ func (c *Client) CreatePod(ctx context.Context, pod *v1.Pod) error {
 func (c *Client) DeletePod(ctx context.Context, name string) error {
 	return c.do(ctx, http.MethodDelete, "/api/v1/pods"+name, nil, nil)
 }
+
+func (c *Client) CreateNode(ctx context.Context, node *v1.Node) error {
+	return nil
+}
+
+func (c *Client) UpdatePodStatus(ctx context.Context, name string, status *v1.PodStatus) error {
+	return c.do(ctx, http.MethodPut, "/api/v1/pods/" + name + "/status", status, nil)
+}
+
+func (c *Client) UpdateNodeStatus(ctx context.Context, name string, status *v1.NodeStatus) error {
+	return nil
+}

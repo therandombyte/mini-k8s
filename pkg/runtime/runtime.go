@@ -3,7 +3,12 @@
 
 package runtime
 
-import "time"
+import (
+	"context"
+	"time"
+
+	v1 "github.com/therandombyte/mini-k8s/pkg/api/v1"
+)
 
 type PodState string
 
@@ -28,7 +33,7 @@ type PodStatus struct {
 
 // the CRI decopuling
 type Runtime interface {
-	EnsurePod()
-	StopPod()
-	PodStatus()
+	EnsurePod(ctx context.Context, pod *v1.Pod) error
+	StopPod(ctx context.Context, namespace, name string ) error
+	PodStatus(ctx context.Context, namespace, name string) (PodStatus, bool, error)
 }
