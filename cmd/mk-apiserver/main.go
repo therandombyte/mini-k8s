@@ -14,7 +14,7 @@ func main() {
 	st := memory.New()
 	srv := apiserver.New(cfg, st)
 
-	log.Printf("starting mmk-apiserver on %s", cfg.Address)
+	log.Printf("starting mk-apiserver on %s", cfg.Address)
 
 	if err := srv.Run(context.Background()); err != nil {
 		log.Fatal(err)

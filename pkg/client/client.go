@@ -80,3 +80,11 @@ func (c *Client) ListPods(ctx context.Context) (*v1.PodList, error) {
 	var out v1.PodList
 	return &out, c.do(ctx, http.MethodGet, "/api/v1/pods", nil, &out)
 }
+
+func (c *Client) CreatePod(ctx context.Context, pod *v1.Pod) error {
+	return c.do(ctx, http.MethodPost, "/api/v1/pods", pod, nil)
+}
+
+func (c *Client) DeletePod(ctx context.Context, name string) error {
+	return c.do(ctx, http.MethodDelete, "/api/v1/pods"+name, nil, nil)
+}

@@ -25,7 +25,7 @@ type Container struct {
 	Args []string
 }
 
-// What: Desired state for a pod
+// What: Spec === Desired state for a pod
 // Why: What containers/workloads to run (by deployments/api clients), which node this pod is assigned to (by scheduler)
 type PodSpec struct {
 	NodeName string
@@ -56,7 +56,7 @@ type Pod struct {
 // Why: api response for get pods
 type PodList struct {
 	apimachinery.TypeMeta
-	Metadata apimachinery.ListMeta
+	Metadata apimachinery.ListMeta // this is resourceversion
 	Items []Pod
 }
 

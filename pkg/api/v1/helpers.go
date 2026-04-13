@@ -1,4 +1,4 @@
-// constructors for controllers and kubelet to create resources
+// Constructors for controllers and kubelet to create resources
 
 package v1
 
@@ -9,6 +9,7 @@ import (
 	"github.com/therandombyte/mini-k8s/pkg/apimachinery"
 )
 
+// Metadata is getting initialized during constructor invocation
 func NewNode(name string) *Node {
 	return &Node{
 		TypeMeta: apimachinery.TypeMeta{
@@ -68,7 +69,7 @@ func PodFromTemplate(dep *Deployment, index int) *Pod {
 			Labels: dep.Spec.Template.Metadata.Labels,  // copy over labels
 			CreationTimestamp: time.Now(),
 		},
-		Spec: dep.Spec.Template.Spec,
+		Spec: dep.Spec.Template.Spec,  // copy over spec
 		Status: PodStatus{Phase: "Pending"},
 	}
 }

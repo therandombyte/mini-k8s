@@ -23,6 +23,7 @@ type Store struct {
 	listRV atomic.Int64
 }
 
+// NOTE: Every object needs a struct, a constuctor and helper functions
 // What: constructor that returns a store backed by memorystore
 // Why: to be invoked by API server
 // Initializing the data map keeps the other code free to check for nil
@@ -32,6 +33,7 @@ func New() *Store {
 	}
 }
 
+// key should be unique, so ns/name is the choice
 func key(namespace, name string) string {
 	return namespace + "/" + name
 }

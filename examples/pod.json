@@ -1,0 +1,22 @@
+{
+	"apiVersion": "mini-k8s/v1",
+	"kind": "pod",
+	"metadata": {
+		"name": "demo-pod",
+		"namespace": "default"
+	},
+	"spec": {
+		"containers": [
+			{
+				"name": "app",
+				"image": "busybox",
+				"command": [
+					"sleep"
+				],
+				"args": [
+					"3600"
+				]
+			}
+		]
+	}
+}

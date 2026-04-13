@@ -7,8 +7,10 @@ package apiserver
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"sync/atomic"
+	"time"
 
 	v1 "github.com/therandombyte/mini-k8s/pkg/api/v1"
 	"github.com/therandombyte/mini-k8s/pkg/config"
@@ -69,6 +71,7 @@ func (s *Server) handlePods(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// api response being formed
 		list := v1.PodList{}
 		list.APIVersion = "mini-k8s/v1"
 		list.Kind = "PodList"
@@ -84,7 +87,36 @@ func (s *Server) handlePods(w http.ResponseWriter, r *http.Request) {
 		util.WriteJSON(w, http.StatusOK, list)
 
 	case http.MethodPost:
+		var pod v1.Pod
+		if err := decode(r, &pod); err != nil {
+			util.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
 
+		if pod.Metadata.Namespace == "" {
+			pod.Metadata.Namespace = "default"
+		}
+		if pod.Metadata.CreationTimestamp.IsZero() {
+			pod.Metadata.CreationTimestamp = time.Now()
+		}
+		pod.Metadata.ResourceVersion = s.nextRV()
+		if pod.Status.Phase == "" {
+			pod.Status.Phase = "Pending"
+		}
+
+		if err := s.st.Create(r.Context(), "pods", pod.Metadata.Namespace, pod.Metadata.Name, &pod); err != nil {
+			util.WriteJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+			return
+		}
+
+		util.WriteJSON(w, http.StatusCreated, pod)
+
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	
 	}
+}
+
+func decode[T any](r *http.Request, out *T) error {
+	return json.NewDecoder(r.Body).Decode(out)
 }
