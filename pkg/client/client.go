@@ -93,10 +93,18 @@ func (c *Client) CreateNode(ctx context.Context, node *v1.Node) error {
 	return nil
 }
 
+func (c *Client) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	return c.do(ctx, http.MethodPut, "/api/v1/pods/"+ pod.Metadata.Name, pod, nil)
+}
+
 func (c *Client) UpdatePodStatus(ctx context.Context, name string, status *v1.PodStatus) error {
 	return c.do(ctx, http.MethodPut, "/api/v1/pods/" + name + "/status", status, nil)
 }
 
 func (c *Client) UpdateNodeStatus(ctx context.Context, name string, status *v1.NodeStatus) error {
 	return nil
+}
+
+func (c *Client) ListNodes(ctx context.Context) (*v1.NodeList, error) {
+	return nil, nil
 }

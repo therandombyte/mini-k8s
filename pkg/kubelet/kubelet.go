@@ -62,6 +62,7 @@ func (k *Kubelet) Run(ctx context.Context) error {
 }
 
 func (k *Kubelet) syncPods(ctx context.Context) error {
+	// list all pods
 	pods, err := k.Client.ListPods(ctx)
 	if err != nil {
 		return err
@@ -69,14 +70,14 @@ func (k *Kubelet) syncPods(ctx context.Context) error {
 
 	for i := range pods.Items {
 		pod := pods.Items[i]
-
+		
 		if pod.Spec.NodeName != k.NodeName {
 			continue
 		}
 		if pod.Status.Phase == "Running" {
 			continue
 		}
-
+		// proceed, if the pod is assigned to this node and not running, then mark it as running
 		now := time.Now()
 		status := &v1.PodStatus{
 			Phase: "Running",
@@ -92,7 +93,7 @@ func (k *Kubelet) syncPods(ctx context.Context) error {
 				},
 			},
 		}
-
+		// update pod status to api server
 		if err := k.Client.UpdatePodStatus(ctx, pod.Metadata.Name, status); err != nil {
 			log.Printf("Update pod status %s: %v", pod.Metadata.Name, err)
 		}
