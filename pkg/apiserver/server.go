@@ -49,6 +49,9 @@ func (s *Server) Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/pods", s.handlePods)
 	mux.HandleFunc("/api/v1/pods/", s.handlePodsByName)
 
+	mux.HandleFunc("/api/v1/nodes", s.handleNodes)
+	mux.HandleFunc("/api/v1/nodes/", s.handleNodesByName)
+
 
 	httpServer := &http.Server{Addr: s.cfg.Address, Handler: mux}
 
@@ -123,5 +126,52 @@ func decode[T any](r *http.Request, out *T) error {
 }
 
 func (s *Server) handlePodsByName(w http.ResponseWriter, r *http.Request) {
+	
+}
+
+func (s *Server) handleNodes(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		items, rv, err := s.st.List(r.Context(), "nodes", "")
+		if err != nil {
+			util.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+
+		list := v1.NodeList{}
+		list.APIVersion = "mini-k8s/v1"
+		list.Kind= "NodeList"
+		list.Metadata.ResourceVersion = rv
+
+		for _, item := range items {
+			if node, ok := item.(*v1.Node); ok {
+				list.Items = append(list.Items, *node)
+			}
+		}
+		util.WriteJSON(w, http.StatusOK, list)
+	case http.MethodPost:
+		var node v1.Node
+		if err := decode(r, &node); err != nil {
+			util.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+
+		if node.Metadata.CreationTimestamp.IsZero() {
+			node.Metadata.CreationTimestamp = time.Now()
+		}
+		node.Metadata.ResourceVersion = s.nextRV()
+
+		if err := s.st.Create(r.Context(), "nodes", "", node.Metadata.Name, &node); err != nil {
+			util.WriteJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+			return
+		}
+		util.WriteJSON(w, http.StatusCreated, node)
+
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleNodesByName(w http.ResponseWriter, r *http.Request) {
 	
 }
