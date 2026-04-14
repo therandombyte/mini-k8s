@@ -42,6 +42,12 @@ func main() {
 				log.Fatal(err)
 			}
 			_ = enc.Encode(obj)
+		case "nodes":
+			obj, err := c.ListNodes(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			_ = enc.Encode(obj)
 		default:
 			log.Fatalf("unknown resource %q", os.Args[2])
 		}
@@ -77,6 +83,14 @@ func main() {
 				log.Fatal(err)
 			}
 			if err := c.CreatePod(ctx, &obj);err != nil {
+				log.Fatal(err)
+			}
+		case "nodes":
+			var obj v1.Node
+			if err := json.Unmarshal(b, &obj); err != nil {
+				log.Fatal(err)
+			}
+			if err := c.CreateNode(ctx, &obj); err != nil {
 				log.Fatal(err)
 			}
 		default:

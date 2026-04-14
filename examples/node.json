@@ -1,0 +1,7 @@
+{
+	"apiVersion": "mini=k9s/v1",
+	"kind": "Node",
+	"metadata": {
+		"name": "node1"
+	}
+}

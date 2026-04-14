@@ -58,6 +58,7 @@ func (r *Runtime) EnsurePod(ctx context.Context, pod *v1.Pod) error {
 
 	// core reconciliation
 	r.mu.RLock()
+	// if already running, move on
 	if existing, ok := r.procs[k]; ok && existing.cmd != nil && 
 		existing.cmd.Process != nil && !existing.done {
 			r.mu.RUnlock()
@@ -65,7 +66,7 @@ func (r *Runtime) EnsurePod(ctx context.Context, pod *v1.Pod) error {
 	}
 	r.mu.RUnlock()
 
-	// use only the first container
+	// otherwise, get the first container
 	c := pod.Spec.Containers[0]
 	// take commands and args out from spec to form a command
 	args := append([]string{}, c.Command...)
@@ -82,7 +83,7 @@ func (r *Runtime) EnsurePod(ctx context.Context, pod *v1.Pod) error {
 	}
 
 	// redirecting stdout and stderr to files, to its available on nodes
-	// and can be retireved bu kubectl logs
+	// and can be retireved by kubectl logs
 	stdoutFile, err := os.OpenFile(filepath.Join(podDir, "stdout.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return err
@@ -98,14 +99,14 @@ func (r *Runtime) EnsurePod(ctx context.Context, pod *v1.Pod) error {
 	cmd.Stderr = stderrFile
 	cmd.Dir = podDir
 
-	// start the real process
-	// returns immediately
+	// start the real process. This returns immediately
 	if err := cmd.Start(); err != nil {
 		_= stdoutFile.Close()
 		_=stderrFile.Close()
 		return err
 	}
 
+	// create an entry for the running process
 	entry := &procEntry{
 		cmd: cmd,
 		startedAt: time.Now(),
@@ -117,7 +118,7 @@ func (r *Runtime) EnsurePod(ctx context.Context, pod *v1.Pod) error {
 
 	// wait async for exit
 	go func() {
-		err := cmd.Wait()
+		err := cmd.Wait() // returns nil when process completes without error
 		now := time.Now()
 		
 		r.mu.Lock()
@@ -127,17 +128,21 @@ func (r *Runtime) EnsurePod(ctx context.Context, pod *v1.Pod) error {
 		entry.done = true
 		entry.exitedAt = now
 
-		if err == nil {
+		if err == nil {  // nil from Wait() gets converted to exitcode 0
 			entry.exitCode = 0
 			return
 		}
 
+		// if process exited with non-zero, extract real exit code
+		// exitErr.Sys() returns os specific exit info
+		// ExitStatus() gives the actual integer code
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 				entry.exitCode = status.ExitStatus()
 				return
 			}
 		}
+		// fallback, still dont know what it is, mark it as non-zero
 		entry.exitCode = 1
 	}()
 
@@ -168,7 +173,23 @@ func(r *Runtime) PodStatus(ctx context.Context, namespace, name string) (rt.PodS
 	}
 
 	if !entry.done {
-		return 
+		return rt.PodStatus{
+			State: rt.PodStateRunnning,
+			PID: entry.cmd.Process.Pid,
+			StartedAt: &entry.startedAt,
+		}, true, nil
 	}
-	return nil, false, nil
+
+	state := rt.PodStateSucceded
+	if entry.exitCode != 0 {
+		state = rt.PodStateFailed
+	}
+
+	return rt.PodStatus{
+		State: state,
+		PID: entry.cmd.Process.Pid,
+		StartedAt: &entry.startedAt,
+		ExitedAt: &entry.exitedAt,
+		ExitCode: entry.exitCode,
+	}, true, nil
 }
