@@ -193,3 +193,14 @@ func(r *Runtime) PodStatus(ctx context.Context, namespace, name string) (rt.PodS
 		ExitCode: entry.exitCode,
 	}, true, nil
 }
+
+func (r *Runtime) PodKeys() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]string, 0, len(r.procs))
+	for k := range r.procs {
+		out = append(out, k)
+	}
+	return out
+}

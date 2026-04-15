@@ -1,0 +1,22 @@
+{
+	"apiVersion": "mini-k8s/v1",
+	"kind": "pod",
+	"metadata": {
+		"name": "sleepy",
+		"namespace": "default"
+	},
+	"spec": {
+		"nodeName": "node1",
+		"containers": [
+			{
+				"name": "main",
+				"command": [
+					"sleep"
+				],
+				"args": [
+					"300"
+				]
+			}
+		]
+	}
+}

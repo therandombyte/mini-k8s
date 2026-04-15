@@ -12,17 +12,20 @@ import (
 	v1 "github.com/therandombyte/mini-k8s/pkg/api/v1"
 	"github.com/therandombyte/mini-k8s/pkg/apimachinery"
 	"github.com/therandombyte/mini-k8s/pkg/client"
+	rt "github.com/therandombyte/mini-k8s/pkg/runtime"
 )
 
 type Kubelet struct {
 	NodeName string
 	Client *client.Client
+	Runtime rt.Runtime
 }
 
-func New(nodeName string, c *client.Client) *Kubelet {
+func New(nodeName string, c *client.Client, r rt.Runtime) *Kubelet {
 	return &Kubelet{
 		NodeName: nodeName,
 		Client: c,
+		Runtime: r,
 	}
 }
 
@@ -54,65 +57,36 @@ func (k *Kubelet) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			if err := k.syncPods(ctx); err != nil {
-				log.Printf("kubelet sync: %v", err)
+			if err := k.reconcile(ctx); err != nil {
+				log.Printf("reconcile sync: %v", err)
 			}
 		}
 	}
 }
 
-func (k *Kubelet) syncPods(ctx context.Context) error {
+func (k *Kubelet) reconcile(ctx context.Context) error {
 	// list all pods
 	pods, err := k.Client.ListPods(ctx)
 	if err != nil {
 		return err
 	}
 
-	for i := range pods.Items {
-		pod := pods.Items[i]
-		
-		if pod.Spec.NodeName != k.NodeName {
-			continue
-		}
-		if pod.Status.Phase == "Running" {
-			continue
-		}
-		// proceed, if the pod is assigned to this node and not running, then mark it as running
-		now := time.Now()
-		status := &v1.PodStatus{
-			Phase: "Running",
-			HostIP: k.NodeName,
-			PodIP: "10.0.0.1",
-			StartTime: &now,
-			Conditions: []apimachinery.Condition{
-				{
-					Type: "Ready",
-					Status: "True",
-					Reason: "Started",
-					LastTransitionTime: now,
-				},
-			},
-		}
-		// update pod status to api server
-		if err := k.Client.UpdatePodStatus(ctx, pod.Metadata.Name, status); err != nil {
-			log.Printf("Update pod status %s: %v", pod.Metadata.Name, err)
-		}
+	k.syncPods(ctx, pods.Items)
+	k.stopMissingPods(ctx, pods.Items)
 
-		nodeStatus := &v1.NodeStatus{
-			Capacity: v1.ResourceList{ "pods": 110},
-			Allocatable: v1.ResourceList{ "pods": 110},
-			Conditions: []apimachinery.Condition{
-				{
-					Type: "Ready",
-					Status: "True",
-					Reason: "Heartbeat",
-					LastTransitionTime: time.Now(),
-				},
+	nodeStatus := &v1.NodeStatus{
+		Capacity: v1.ResourceList{ "pods": 110},
+		Allocatable: v1.ResourceList{ "pods": 110},
+		Conditions: []apimachinery.Condition{
+			{
+				Type: "Ready",
+				Status: "True",
+				Reason: "KubeletReady",
+				LastTransitionTime: time.Now(),
 			},
-		}
-		return k.Client.UpdateNodeStatus(ctx, k.NodeName, nodeStatus)
+		},
 	}
-	return nil
+	return k.Client.UpdateNodeStatus(ctx, k.NodeName, nodeStatus)
 }
 
 
