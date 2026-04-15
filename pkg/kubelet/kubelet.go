@@ -72,7 +72,7 @@ func (k *Kubelet) reconcile(ctx context.Context) error {
 	}
 
 	k.syncPods(ctx, pods.Items)
-	k.stopMissingPods(ctx, pods.Items)
+	// k.stopMissingPods(ctx, pods.Items)
 
 	nodeStatus := &v1.NodeStatus{
 		Capacity: v1.ResourceList{ "pods": 110},

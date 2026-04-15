@@ -107,7 +107,7 @@ func (c *Client) ListNodes(ctx context.Context) (*v1.NodeList, error) {
 }
 
 func (c *Client) UpdateNodeStatus(ctx context.Context, name string, status *v1.NodeStatus) error {
-	return c.do(ctx, http.MethodPut, "/api/v1/nodes"+name+"/status", status, nil)
+	return c.do(ctx, http.MethodPut, "/api/v1/nodes/"+name+"/status", status, nil)
 }
 
 
