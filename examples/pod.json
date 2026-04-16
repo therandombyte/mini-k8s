@@ -6,15 +6,16 @@
 		"namespace": "default"
 	},
 	"spec": {
+		"nodeName": "node1",
 		"containers": [
 			{
 				"name": "app",
-				"image": "busybox",
+				"image": "docker.io/library/busybox:latest",
 				"command": [
 					"sleep"
 				],
 				"args": [
-					"3600"
+					"300"
 				]
 			}
 		]
